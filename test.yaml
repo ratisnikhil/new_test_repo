@@ -1,0 +1,134 @@
+---
+name: sslcertkeytest2
+namespace: com.citrix.adc.nitro1
+version: "1.0"
+description: "This StyleBook defines an SSL CertKey Params"
+display-name: "SSL CertKey Configuration"
+schema-version: "1.0"
+import-stylebooks:
+  -
+    namespace: netscaler.nitro.config
+    prefix: ns
+    version: "13.1"
+substitutions:
+  password-val(passplain): if-then-else(exists($passplain), true)
+parameters: 
+  -
+    name: certkey
+    label: "Cert Key Name"
+    description: "Name for the certificate and private-key pair. Must begin with an ASCII alphanumeric or underscore (_) character, and must contain only ASCII alphanumeric, underscore, hash (#), period (.), space, colon (:), at (@), equals (=), and hyphen (-) characters. Cannot be changed after the certificate-key pair is created.
+
+The following requirement applies only to the NetScaler CLI:
+If the name includes one or more spaces, enclose the name in double or single quotation marks (for example, \"my cert\" or 'my cert')."
+    type: string
+    key: true
+    required: true
+    updatable: false
+    min-length: 1
+  -
+    name: inform
+    label: "Input Format"
+    description: "Input format of the certificate and the private-key files. The three formats supported by the appliance are:
+PEM - Privacy Enhanced Mail
+DER - Distinguished Encoding Rule
+PFX - Personal Information Exchange"
+    type: string
+    updatable: false
+    allowed-values:
+      - "DER"
+      - "PEM"
+      - "PFX"
+    gui:
+      dependent-parameters:
+        -
+          target-parameter: $parameters.key
+          matching-values:
+            - PFX
+          action: hide
+  -
+    name: cert
+    label: "X509 Cert File"
+    description: "Name of and, optionally, path to the X509 certificate file that is used to form the certificate-key pair. The certificate file should be present on the appliance's hard-disk drive or solid-state drive. Storing a certificate in any location other than the default might cause inconsistency in a high availability setup. /nsconfig/ssl/ is the default path."
+    type: object
+    parameters:
+      -
+        name: certname
+        label: Certificate Name
+        description: "Certificate Name"
+        type: string
+      -
+        name: certfile
+        label: Certificate
+        description: "Certificate Content"
+        type: certfile
+  -
+    name: key
+    label: "Private Key File"
+    description: "Name of and, optionally, path to the private-key file that is used to form the certificate-key pair. The certificate file should be present on the appliance's hard-disk drive or solid-state drive. Storing a certificate in any location other than the default might cause inconsistency in a high availability setup. /nsconfig/ssl/ is the default path."
+    type: object
+    gui:
+      summary_display: false
+    parameters:
+      -
+        name: keyname
+        label: Key File Name
+        description: "Key File Name"
+        type: string
+      -
+        name: keyfile
+        label: Key File
+        description: "Key File Content"
+        type: certfile
+      -
+        name: passplain
+        label: "Key File Passphrase"
+        description: "Passphrase used to encrypt the private-key. Required when adding an encrypted private-key in PEM format."
+        type: password
+  -
+    name: bundle
+    label: "Bundle"
+    description: "Parse the certificate chain as a single file after linking the server certificate to its issuer's certificate within the file."
+    type: string
+    updatable: false
+    allowed-values:
+      - "YES"
+      - "NO"
+  -
+    name: linkcertkeyname
+    label: Link Certkey Name
+    description: Link Certkey Name
+    type: string
+components:
+  -
+    name: cert-upload-comp
+    type: ns::systemfile
+    condition: $parameters.cert
+    properties:
+      filename: $parameters.cert.certname
+      filelocation: "/nsconfig/ssl"
+      filecontent: base64.encode($parameters.cert.certfile.contents)
+      fileencoding: "base64"
+  -
+    name: key-upload-comp
+    type: ns::systemfile
+    condition: $parameters.key and $parameters.cert.certname != $parameters.key.keyname
+    properties:
+      filename: $parameters.key.keyname
+      filelocation: "/nsconfig/ssl"
+      filecontent: base64.encode($parameters.key.keyfile.contents)
+      fileencoding: "base64"      
+  -
+    name: sslcertkey-addandlink-comp
+    type: ns::sslcertkey
+    description: This component adds sslcertkey and links sslcertkey to 'linkcertkey' name
+    meta-properties:
+      action: link
+    properties:
+      certkey: $parameters.certkey
+      cert?: $parameters.cert.certname
+      linkcertkeyname?: $parameters.linkcertkeyname
+      key?: $parameters.key.keyname
+      passplain?: $parameters.key.passplain
+      password?: $substitutions.password-val($parameters.key.passplain)
+      inform?: $parameters.inform
+      bundle?: $parameters.bundle
