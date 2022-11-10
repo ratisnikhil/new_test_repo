@@ -1,0 +1,33 @@
+---
+name: entity_lbmonitor
+description: "This stylebook defines monitor object"
+display-name: "LB Monitor Configuration"
+namespace: com.citrix.adc.nitro1
+schema-version: "1.0"
+version: "1.0"
+import-stylebooks:
+  -
+    namespace: netscaler.nitro.config
+    prefix: ns
+    version: "13.1"
+parameters: 
+  -
+    name: monitorname
+    label: "Monitor Name"
+    description: "Name for the monitor." 
+    type: string
+    key: true
+    required: true
+    updatable: false
+  -
+    name: type
+    label: "Cert Name"
+    description: "Name for the cert." 
+    type: string
+components:
+  -
+    name: lbmonitor-comp
+    type: ns::lbmonitor
+    properties:
+      monitorname: $parameters.monitorname
+      type?: $parameters.type
